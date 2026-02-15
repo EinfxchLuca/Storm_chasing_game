@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Storm Chasing Tycoon</title>
+    <title>Storm Chasing Tycoon - Realismus Edition</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,23 +12,23 @@
     <div id="ui">
         <div class="stat">Budget: $<span id="money">0</span></div>
         <div class="stat">Sonden-Daten: <span id="data">0</span>%</div>
-        <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 5px;">
-            WASD: Fahren | LEERTASTE: Sonde abwerfen
+        <div class="controls-info">
+            STEUERUNG: WASD zum Fahren | LEERTASTE: Sonde abwerfen
         </div>
     </div>
 
     <div id="shop">
         <div id="shop-header">
-            <strong>FAHRZEUG-SHOP</strong>
-            <button id="toggle-shop" onclick="toggleShop()">X</button>
+            <strong>FAHRZEUG-WERKSTATT</strong>
+            <button id="toggle-shop-btn" onclick="toggleShop()">X</button>
         </div>
         <div id="shop-content">
             <button id="buyBtn" onclick="buyInterceptor()">
-                Dominator 3 kaufen<br>
+                DOMINATOR 3 KAUFEN<br>
                 <small>Kosten: $500</small>
             </button>
-            <p style="font-size: 0.7rem; color: #bbb; margin-top: 10px;">
-                Hält extremen Winden stand und ist schneller im Gelände.
+            <p class="description">
+                Der Dominator 3 bietet Schutz vor EF5-Tornados und ist im Gelände deutlich schneller.
             </p>
         </div>
     </div>
@@ -41,9 +41,10 @@
 <script src="game.js"></script>
 
 <script>
+    // Funktion zum Ein- und Ausklappen des Shops
     function toggleShop() {
         const content = document.getElementById('shop-content');
-        const btn = document.getElementById('toggle-shop');
+        const btn = document.getElementById('toggle-shop-btn');
         if (content.style.display === "none") {
             content.style.display = "block";
             btn.innerText = "X";

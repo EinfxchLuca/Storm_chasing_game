@@ -1,34 +1,42 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// DIE KARTE IST JETZT VIEL GRÖSSER
-canvas.width = 2500;
-canvas.height = 1800;
+// Riesige Karte (Erweiterte Welt)
+canvas.width = 4000;
+canvas.height = 3000;
 
 let money = 0;
 let collectedData = 0;
 let gameOver = false;
 
-// Straßen-Definitionen für die große Karte
-const roadWidth = 100;
-const horizontalRoadY = 800;
-const verticalRoadX = 1200;
+// Bilder laden
+const imgCar = new Image();
+imgCar.src = 'https://cdn-icons-png.flaticon.com/512/744/744465.png'; // Normales SUV
+const imgInterceptor = new Image();
+imgInterceptor.src = 'https://cdn-icons-png.flaticon.com/512/2739/2739667.png'; // Dominator-Look
+const imgTornado = new Image();
+imgTornado.src = 'https://cdn-icons-png.flaticon.com/512/1146/1146860.png'; // Tornado-Icon
+
+// Straßen-Netzwerk (viele Straßen für Realismus)
+const roads = [
+    {x: 0, y: 1500, w: 4000, h: 120}, // Ost-West Highway
+    {x: 2000, y: 0, w: 120, h: 3000}, // Nord-Süd Highway
+    {x: 0, y: 500, w: 2000, h: 60},   // Feldweg 1
+    {x: 2000, y: 2500, w: 2000, h: 60} // Feldweg 2
+];
 
 let player = {
-    x: 1250, 
-    y: 1600, 
-    speed: 0,
-    baseMaxSpeed: 2.5, // Langsames, realistisches Fahren
+    x: 2050, y: 2800,
+    baseMaxSpeed: 3, 
     isInterceptor: false,
-    hp: 100,
-    maxHp: 100
+    hp: 100, maxHp: 100,
+    width: 60, height: 35
 };
 
 let tornado = {
-    x: 1250, 
-    y: -300,
-    size: 60,
-    speed: 0.5, // Der Tornado zieht sehr langsam und bedrohlich
+    x: 2000, y: -500,
+    size: 150,
+    speed: 0.3, // EXTREM LANGSAM
     windSpeed: 110,
     efScale: "EF0"
 };
@@ -36,208 +44,135 @@ let tornado = {
 let probe = { x: -100, y: -100, active: false };
 let keys = {};
 
-// Steuerung
-window.addEventListener('keydown', function(e) {
-    keys[e.key.toLowerCase()] = true;
-});
-
-window.addEventListener('keyup', function(e) {
-    keys[e.key.toLowerCase()] = false;
-});
-
-window.addEventListener('keypress', function(e) {
-    if(e.code === 'Space') {
-        deployProbe();
-    }
-});
+window.onkeydown = e => keys[e.key.toLowerCase()] = true;
+window.onkeyup = e => keys[e.key.toLowerCase()] = false;
+window.onkeypress = e => { if(e.code === 'Space') deployProbe(); };
 
 function deployProbe() {
-    if(!probe.active && !gameOver) {
-        probe.x = player.x;
-        probe.y = player.y;
-        probe.active = true;
-    }
+    if(!probe.active) { probe.x = player.x; probe.y = player.y; probe.active = true; }
 }
 
 function buyInterceptor() {
     if (money >= 500 && !player.isInterceptor) {
         money -= 500;
         player.isInterceptor = true;
-        player.baseMaxSpeed = 3.5;
-        player.hp = 600;
-        player.maxHp = 600;
-        
+        player.baseMaxSpeed = 4.5;
+        player.hp = 800; player.maxHp = 800;
         const btn = document.getElementById('buyBtn');
-        btn.innerText = "DOMINATOR 3 AKTIV";
+        btn.innerText = "DOMINATOR AKTIV";
         btn.classList.add('unlocked');
     }
 }
 
-function drawBackground() {
-    // 1. Grasfläche
-    ctx.fillStyle = "#3e4a2e";
+function drawMap() {
+    // Realistischeres Gras (Dunkles Grün)
+    ctx.fillStyle = "#1e2b14";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 2. Straßen (Feldwege)
-    ctx.fillStyle = "#7a6652";
-    // Horizontaler Weg
-    ctx.fillRect(0, horizontalRoadY, canvas.width, roadWidth);
-    // Vertikaler Weg
-    ctx.fillRect(verticalRoadX, 0, roadWidth, canvas.height);
+    // Asphalt-Straßen mit Mittelstreifen
+    ctx.fillStyle = "#333";
+    roads.forEach(r => {
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        // Mittelstreifen
+        ctx.strokeStyle = "#ffd700";
+        ctx.setLineDash([20, 20]);
+        ctx.beginPath();
+        if(r.w > r.h) { ctx.moveTo(r.x, r.y+r.h/2); ctx.lineTo(r.x+r.w, r.y+r.h/2); }
+        else { ctx.moveTo(r.x+r.w/2, r.y); ctx.lineTo(r.x+r.w/2, r.y+r.h); }
+        ctx.stroke();
+    });
 
-    // 3. Häuser auf der Karte verteilen
-    drawHouse(400, 400);
-    drawHouse(1800, 500);
-    drawHouse(600, 1200);
-    drawHouse(2000, 1400);
-}
-
-function drawHouse(x, y) {
-    ctx.fillStyle = "#5d4037"; 
-    ctx.fillRect(x, y, 60, 45); // Hauswand
-    ctx.fillStyle = "#b71c1c"; 
-    ctx.beginPath();
-    ctx.moveTo(x - 5, y);
-    ctx.lineTo(x + 30, y - 30);
-    ctx.lineTo(x + 65, y);
-    ctx.fill();
-}
-
-function respawnTornado() {
-    tornado.y = -400;
-    tornado.x = 300 + Math.random() * 1900;
-    
-    let randomRoll = Math.random();
-    if(randomRoll > 0.9) {
-        tornado.efScale = "EF5"; 
-        tornado.size = 160; 
-        tornado.windSpeed = 460; 
-        tornado.speed = 0.7;
-    } else if(randomRoll > 0.6) {
-        tornado.efScale = "EF2"; 
-        tornado.size = 85; 
-        tornado.windSpeed = 200; 
-        tornado.speed = 0.55;
-    } else {
-        tornado.efScale = "EF0"; 
-        tornado.size = 55; 
-        tornado.windSpeed = 110; 
-        tornado.speed = 0.45;
+    // Viele Häuser für Realismus
+    for(let i=0; i<30; i++) {
+        drawRealisticHouse(500 + (i*600)%3000, 300 + (i*450)%2500);
     }
+}
+
+function drawRealisticHouse(x, y) {
+    ctx.fillStyle = "#444"; ctx.fillRect(x, y, 80, 60); // Wand
+    ctx.fillStyle = "#222"; ctx.fillRect(x+20, y+20, 15, 15); // Fenster
+    ctx.fillStyle = "#600"; ctx.beginPath(); // Dach
+    ctx.moveTo(x-10, y); ctx.lineTo(x+40, y-40); ctx.lineTo(x+90, y); ctx.fill();
 }
 
 function update() {
     if(gameOver) return;
 
-    // PRÜFEN: Ist der Spieler auf der Straße?
-    let onHorizontalRoad = (player.y > horizontalRoadY && player.y < horizontalRoadY + roadWidth);
-    let onVerticalRoad = (player.x > verticalRoadX && player.x < verticalRoadX + roadWidth);
-    
-    let currentMaxSpeed = (onHorizontalRoad || onVerticalRoad) ? player.baseMaxSpeed : player.baseMaxSpeed * 0.4;
-    
-    // Bewegung des Spielers
-    if (keys['w'] || keys['arrowup']) player.y -= currentMaxSpeed;
-    if (keys['s'] || keys['arrowdown']) player.y += currentMaxSpeed;
-    if (keys['a'] || keys['arrowleft']) player.x -= currentMaxSpeed;
-    if (keys['d'] || keys['arrowright']) player.x += currentMaxSpeed;
+    let onRoad = roads.some(r => player.x > r.x && player.x < r.x+r.w && player.y > r.y && player.y < r.y+r.h);
+    let speed = onRoad ? player.baseMaxSpeed : player.baseMaxSpeed * 0.4;
 
-    // Tornado-Logik
+    if (keys['w']) player.y -= speed;
+    if (keys['s']) player.y += speed;
+    if (keys['a']) player.x -= speed;
+    if (keys['d']) player.x += speed;
+
+    // Tornado-KI
     tornado.y += tornado.speed;
-    tornado.x += Math.sin(Date.now() / 1500) * 1; // Sanftes Pendeln
+    tornado.x += Math.sin(Date.now()/2000) * 0.5;
 
-    if (tornado.y > canvas.height + 400) {
-        respawnTornado();
+    if (tornado.y > canvas.height + 500) {
+        tornado.y = -500;
+        tornado.x = 500 + Math.random() * 3000;
+        tornado.efScale = Math.random() > 0.8 ? "EF5" : "EF1";
+        tornado.size = tornado.efScale === "EF5" ? 300 : 120;
+        tornado.speed = 0.2 + Math.random() * 0.3;
     }
 
-    // Kollisionsprüfung (Spieler im Tornado?)
-    let distanceToTornado = Math.hypot(tornado.x - player.x, tornado.y - player.y);
-    if (distanceToTornado < tornado.size) {
-        let damageAmount = player.isInterceptor ? 0.12 : 3.5;
-        player.hp -= damageAmount;
-        if (player.hp <= 0) {
-            gameOver = true;
-            alert("Dein Fahrzeug wurde vom Tornado zerstört!");
-            location.reload();
-        }
+    // Kamera-Fix: Folgt dem Auto
+    const viewport = document.getElementById('game-viewport');
+    viewport.scrollLeft = player.x - window.innerWidth / 2;
+    viewport.scrollTop = player.y - window.innerHeight / 2;
+
+    // Kollision
+    let dist = Math.hypot(tornado.x - player.x, tornado.y - player.y);
+    if (dist < tornado.size/2) {
+        player.hp -= player.isInterceptor ? 0.1 : 5;
+        if(player.hp <= 0) { alert("Das Fahrzeug wurde vernichtet!"); location.reload(); }
     }
 
-    // Datensammeln mit der Sonde
+    // Daten sammeln
     if (probe.active) {
-        let distanceToProbe = Math.hypot(tornado.x - probe.x, tornado.y - probe.y);
-        if (distanceToProbe < tornado.size + 40) {
-            collectedData += 0.35;
-            if (collectedData >= 100) {
-                money += 300 + (tornado.windSpeed / 2);
-                collectedData = 0;
-                probe.active = false;
-            }
+        let pDist = Math.hypot(tornado.x - probe.x, tornado.y - probe.y);
+        if (pDist < tornado.size) {
+            collectedData += 0.5;
+            if (collectedData >= 100) { money += 400; collectedData = 0; probe.active = false; }
         }
     }
 
-    // KAMERA-STEUERUNG: Das Browser-Fenster scrollt zum Spieler
-    window.scrollTo(
-        player.x - window.innerWidth / 2, 
-        player.y - window.innerHeight / 2
-    );
-
-    updateUI();
-}
-
-function updateUI() {
     document.getElementById('money').innerText = Math.floor(money);
     document.getElementById('data').innerText = Math.floor(collectedData);
-    
-    const btn = document.getElementById('buyBtn');
-    if(money >= 500 && !player.isInterceptor) {
-        btn.classList.add('affordable');
-    }
+    if(money >= 500 && !player.isInterceptor) document.getElementById('buyBtn').classList.add('affordable');
 }
 
 function draw() {
-    // 1. Hintergrund zeichnen
-    drawBackground();
+    ctx.clearRect(0,0, canvas.width, canvas.height);
+    drawMap();
 
-    // 2. Sonde zeichnen
-    if (probe.active) {
-        ctx.fillStyle = 'orange';
-        ctx.beginPath();
-        ctx.arc(probe.x, probe.y, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "white";
-        ctx.stroke();
+    // Sonde
+    if(probe.active) {
+        ctx.fillStyle = "red"; ctx.beginPath(); ctx.arc(probe.x, probe.y, 10, 0, 7); ctx.fill();
+        ctx.fillStyle = "white"; ctx.fillRect(probe.x-2, probe.y-15, 4, 15); // Antenne
     }
 
-    // 3. Spieler zeichnen
-    ctx.fillStyle = player.isInterceptor ? '#111111' : '#3498db';
-    ctx.fillRect(player.x - 20, player.y - 12, 40, 24);
-    
-    // HP-Balken
-    ctx.fillStyle = "red";
-    ctx.fillRect(player.x - 20, player.y - 25, 40, 6);
-    ctx.fillStyle = "lime";
-    ctx.fillRect(player.x - 20, player.y - 25, 40 * (player.hp / player.maxHp), 6);
+    // Spieler-Auto (Bild statt Rechteck)
+    const activeImg = player.isInterceptor ? imgInterceptor : imgCar;
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.drawImage(activeImg, -player.width/2, -player.height/2, player.width, player.height);
+    ctx.restore();
 
-    // 4. Tornado zeichnen
-    let tornadoGradient = ctx.createRadialGradient(tornado.x, tornado.y, 10, tornado.x, tornado.y, tornado.size);
-    tornadoGradient.addColorStop(0, 'rgba(60, 60, 60, 1)');
-    tornadoGradient.addColorStop(0.7, 'rgba(100, 100, 100, 0.7)');
-    tornadoGradient.addColorStop(1, 'rgba(150, 150, 150, 0)');
-    
-    ctx.fillStyle = tornadoGradient;
-    ctx.beginPath();
-    ctx.arc(tornado.x, tornado.y, tornado.size, 0, Math.PI * 2);
-    ctx.fill();
+    // HP Balken
+    ctx.fillStyle = "red"; ctx.fillRect(player.x-30, player.y-40, 60, 8);
+    ctx.fillStyle = "lime"; ctx.fillRect(player.x-30, player.y-40, 60 * (player.hp/player.maxHp), 8);
 
-    // Info-Text am Tornado
-    ctx.fillStyle = "white";
-    ctx.font = "bold 20px Arial";
-    ctx.fillText(tornado.efScale, tornado.x - 20, tornado.y + 10);
+    // Tornado (Bild + Effekt)
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    ctx.drawImage(imgTornado, tornado.x - tornado.size/2, tornado.y - tornado.size/2, tornado.size, tornado.size);
+    ctx.globalAlpha = 1.0;
+    ctx.fillStyle = "white"; ctx.font = "bold 24px Arial"; ctx.fillText(tornado.efScale, tornado.x-20, tornado.y-tornado.size/2);
+    ctx.restore();
 }
 
-function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-}
-
-gameLoop();
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
