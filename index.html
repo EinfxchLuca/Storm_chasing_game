@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storm Chasing Tycoon</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="game-container">
+    <div id="ui">
+        <div class="stat">Budget: $<span id="money">0</span></div>
+        <div class="stat">Sonden-Daten: <span id="data">0</span>%</div>
+        <div style="font-size: 0.8rem; opacity: 0.7;">LEERTASTE: Sonde abwerfen | WASD: Fahren</div>
+    </div>
+
+    <div id="shop">
+        <h3>Fahrzeug-Werkstatt</h3>
+        <button id="buyBtn" onclick="buyInterceptor()">
+            Dominator 3 kaufen<br>
+            <small>Kosten: $500</small>
+        </button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
