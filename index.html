@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Storm Chaser Pro - Simulation</title>
+    <title>Storm Chaser: Destruction Engine</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,21 +14,18 @@
             <span id="money">$0</span>
         </div>
         <div class="stat-box">
-            <label>DATA SCORE</label>
+            <label>RESEARCH PROGRESS</label>
             <div class="progress-bg"><div id="data-bar"></div></div>
         </div>
     </div>
 
     <div id="shop-window">
         <div class="shop-header">
-            <span>FLEET MANAGEMENT</span>
-            <button id="close-shop" onclick="toggleShop()">×</button>
+            <span>MOBILE BASE</span>
+            <button onclick="toggleShop()">×</button>
         </div>
         <div class="shop-body">
-            <div class="item">
-                <p><strong>DOMINATOR 3</strong><br><small>Armor-Plated Interceptor</small></p>
-                <button id="buyBtn" onclick="buyInterceptor()">UPGRADE ($500)</button>
-            </div>
+            <button id="buyBtn" onclick="buyInterceptor()">UPGRADE TO DOMINATOR ($500)</button>
         </div>
     </div>
 </div>
@@ -38,8 +35,7 @@
 <script src="game.js"></script>
 <script>
     function toggleShop() {
-        const shop = document.getElementById('shop-window');
-        shop.classList.toggle('hidden');
+        document.getElementById('shop-window').classList.toggle('hidden');
     }
 </script>
 </body>

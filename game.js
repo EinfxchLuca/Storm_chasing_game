@@ -1,166 +1,150 @@
-/**
- * STORM CHASER PRO - CORE ENGINE
- */
-
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Engine Settings
-const WORLD_SIZE = { w: 5000, h: 4000 };
+const WORLD = { w: 5000, h: 4000 };
 let money = 0;
 let dataProgress = 0;
 
-// Camera System
-const camera = { x: 0, y: 0, zoom: 1 };
+// Assets (Top-Down Perspektive)
+const images = {
+    car: new Image(),
+    dominator: new Image(),
+    tornado: new Image()
+};
+images.car.src = 'https://cdn-icons-png.flaticon.com/512/3085/3085330.png'; // Top-down SUV
+images.dominator.src = 'https://cdn-icons-png.flaticon.com/512/804/804246.png'; // Top-down Armored
+images.tornado.src = 'https://cdn-icons-png.flaticon.com/512/2316/2316631.png'; // Wirbel-Optik
 
-// Asset Loader (Placeholder Icons)
-const assets = {
-    car: 'https://cdn-icons-png.flaticon.com/512/744/744465.png',
-    interceptor: 'https://cdn-icons-png.flaticon.com/512/2739/2739667.png',
-    tornado: 'https://cdn-icons-png.flaticon.com/512/1146/1146860.png'
+// Spielobjekte
+let player = {
+    x: WORLD.w/2, y: WORLD.h-500,
+    angle: 0, speed: 0,
+    maxSpeed: 2.8, accel: 0.04,
+    isInterceptor: false, hp: 100
 };
 
-const images = {};
-Object.keys(assets).forEach(key => {
-    images[key] = new Image();
-    images[key].src = assets[key];
-});
-
-// Game Objects
-const player = {
-    x: WORLD_SIZE.w / 2,
-    y: WORLD_SIZE.h - 500,
-    angle: 0,
-    speed: 0,
-    maxSpeed: 2.5, // PROFESSIONELL GEDROSSELT
-    accel: 0.05,
-    isInterceptor: false,
-    hp: 100
+let tornado = {
+    x: WORLD.w/2, y: -800,
+    size: 150, speed: 0.3,
+    ef: 0, wind: 110
 };
 
-const tornado = {
-    x: WORLD_SIZE.w / 2,
-    y: -500,
-    size: 250,
-    speed: 0.4, // SEHR REALISTISCH LANGSAM
-    wind: 120,
-    scale: "EF1"
-};
+// Generiere Häuser mit Zerstörungs-Status
+let houses = [];
+for(let i=0; i<60; i++) {
+    houses.push({
+        x: Math.random() * WORLD.w,
+        y: Math.random() * WORLD.h,
+        alive: true,
+        size: 80 + Math.random() * 40
+    });
+}
 
-const roads = [
-    { x: 0, y: 1500, w: 5000, h: 140 }, // Main Highway
-    { x: 2400, y: 0, w: 140, h: 4000 }  // Meridian Road
-];
-
-// Input handling
+const camera = { x: 0, y: 0 };
 const keys = {};
 window.onkeydown = e => keys[e.key.toLowerCase()] = true;
 window.onkeyup = e => keys[e.key.toLowerCase()] = false;
 
+function respawnTornado() {
+    tornado.y = -1000;
+    tornado.x = 500 + Math.random() * (WORLD.w - 1000);
+    const roll = Math.random();
+    if(roll > 0.8) { tornado.ef = 5; tornado.size = 500; tornado.wind = 450; tornado.speed = 0.2; }
+    else if(roll > 0.5) { tornado.ef = 3; tornado.size = 280; tornado.wind = 250; tornado.speed = 0.3; }
+    else { tornado.ef = 0; tornado.size = 120; tornado.wind = 115; tornado.speed = 0.4; }
+}
+
 function update() {
-    // 1. Physik & Bewegung
-    let onRoad = roads.some(r => player.x > r.x && player.x < r.x + r.w && player.y > r.y && player.y < r.y + r.h);
-    let targetMax = onRoad ? player.maxSpeed : player.maxSpeed * 0.4;
+    // Steuerung (Top-Down Physics)
+    if (keys['w']) player.speed = Math.min(player.speed + player.accel, player.maxSpeed);
+    else if (keys['s']) player.speed = Math.max(player.speed - player.accel, -player.maxSpeed/2);
+    else player.speed *= 0.96;
 
-    if (keys['w']) player.speed = Math.min(player.speed + player.accel, targetMax);
-    else if (keys['s']) player.speed = Math.max(player.speed - player.accel, -targetMax/2);
-    else player.speed *= 0.95; // Friction
-
-    if (keys['a']) player.angle -= 0.03;
-    if (keys['d']) player.angle += 0.03;
+    if (keys['a']) player.angle -= 0.035;
+    if (keys['d']) player.angle += 0.035;
 
     player.x += Math.cos(player.angle - Math.PI/2) * player.speed;
     player.y += Math.sin(player.angle - Math.PI/2) * player.speed;
 
-    // 2. Tornado Logic
+    // Tornado Bewegung
     tornado.y += tornado.speed;
-    tornado.x += Math.sin(Date.now()/3000) * 0.8;
+    if(tornado.y > WORLD.h + 1000) respawnTornado();
 
-    // 3. Camera Follow (Smooth Lerp)
-    camera.x += (player.x - canvas.width/2 - camera.x) * 0.1;
-    camera.y += (player.y - canvas.height/2 - camera.y) * 0.1;
-
-    // 4. Collision & UI
-    let dist = Math.hypot(tornado.x - player.x, tornado.y - player.y);
-    if (dist < tornado.size/2) {
-        player.hp -= player.isInterceptor ? 0.1 : 3;
-        if(player.hp <= 0) location.reload();
-    }
-
-    if (keys[' ']) { // Data collection while near
-        if(dist < tornado.size) {
-            dataProgress += 0.5;
-            if(dataProgress >= 100) { money += 400; dataProgress = 0; }
+    // Zerstörung von Häusern
+    houses.forEach(h => {
+        if(h.alive && tornado.ef >= 3) {
+            let d = Math.hypot(tornado.x - h.x, tornado.y - h.y);
+            if(d < tornado.size * 0.6) h.alive = false; // Haus wird weggerissen
         }
+    });
+
+    // Kamera folgt Spieler
+    camera.x = player.x - canvas.width/2;
+    camera.y = player.y - canvas.height/2;
+
+    // Daten sammeln (Leertaste halten im Radius)
+    let dist = Math.hypot(tornado.x - player.x, tornado.y - player.y);
+    if(keys[' '] && dist < tornado.size) {
+        dataProgress += 0.3;
+        if(dataProgress >= 100) { money += 300 + (tornado.ef * 100); dataProgress = 0; }
     }
 
-    // Update UI DOM
+    // UI
     document.getElementById('money').innerText = `$${Math.floor(money)}`;
     document.getElementById('data-bar').style.width = `${dataProgress}%`;
-    const buyBtn = document.getElementById('buyBtn');
-    if(money >= 500 && !player.isInterceptor) buyBtn.classList.add('affordable');
+    const btn = document.getElementById('buyBtn');
+    if(money >= 500 && !player.isInterceptor) btn.classList.add('affordable');
 }
 
 function draw() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // BACKGROUND: Fields & Grass
-    ctx.fillStyle = "#1e2b14";
-    ctx.fillRect(0, 0, WORLD_SIZE.w, WORLD_SIZE.h);
+    // Welt-Boden
+    ctx.fillStyle = "#15200b"; ctx.fillRect(0,0, WORLD.w, WORLD.h);
 
-    // Draw Realistic Fields
-    ctx.fillStyle = "#2d3d1d";
-    for(let i=0; i<30; i++) {
-        ctx.fillRect((i*800)%WORLD_SIZE.w, (i*600)%WORLD_SIZE.h, 400, 300);
-    }
-
-    // ROADS
-    ctx.fillStyle = "#222";
-    roads.forEach(r => {
-        ctx.fillRect(r.x, r.y, r.w, r.h);
-        ctx.strokeStyle = "#ffd700"; ctx.setLineDash([30, 30]); ctx.lineWidth = 4;
-        ctx.beginPath();
-        if(r.w > r.h) { ctx.moveTo(r.x, r.y+r.h/2); ctx.lineTo(r.x+r.w, r.y+r.h/2); }
-        else { ctx.moveTo(r.x+r.w/2, r.y); ctx.lineTo(r.x+r.w/2, r.y+r.h); }
-        ctx.stroke();
+    // Häuser zeichnen
+    houses.forEach(h => {
+        if(h.alive) {
+            ctx.fillStyle = "#5c4033"; ctx.fillRect(h.x, h.y, h.size, h.size); // Haus
+            ctx.fillStyle = "#3e2723"; ctx.fillRect(h.x+10, h.y-10, h.size-20, 10); // Dachansatz
+        } else {
+            ctx.fillStyle = "#333"; // Ruinen
+            ctx.beginPath(); ctx.arc(h.x + h.size/2, h.y + h.size/2, h.size/3, 0, 7); ctx.fill();
+        }
     });
 
-    // HOUSES
-    for(let i=0; i<25; i++) {
-        let hx = (i*900)%WORLD_SIZE.w; let hy = (i*700)%WORLD_SIZE.h;
-        ctx.fillStyle = "#443"; ctx.fillRect(hx, hy, 100, 70); // Shadow/Body
-        ctx.fillStyle = "#622"; ctx.beginPath(); 
-        ctx.moveTo(hx-10, hy); ctx.lineTo(hx+50, hy-40); ctx.lineTo(hx+110, hy); ctx.fill();
-    }
-
-    // PLAYER
+    // Spieler (Top-Down)
     ctx.save();
     ctx.translate(player.x, player.y);
     ctx.rotate(player.angle);
-    ctx.shadowBlur = 15; ctx.shadowColor = "rgba(0,0,0,0.5)";
-    ctx.drawImage(player.isInterceptor ? images.interceptor : images.car, -40, -25, 80, 50);
+    ctx.drawImage(player.isInterceptor ? images.dominator : images.car, -40, -40, 80, 80);
     ctx.restore();
 
-    // TORNADO
+    // Tornado (Skaliert nach EF-Stärke)
     ctx.save();
-    ctx.globalAlpha = 0.8;
     ctx.translate(tornado.x, tornado.y);
-    ctx.rotate(Date.now()/500);
+    ctx.rotate(Date.now() / 200);
+    ctx.globalAlpha = 0.7;
     ctx.drawImage(images.tornado, -tornado.size/2, -tornado.size/2, tornado.size, tornado.size);
     ctx.restore();
+
+    // EF Label am Tornado
+    ctx.fillStyle = "white"; ctx.font = "bold 30px Arial";
+    ctx.fillText("EF" + tornado.ef, tornado.x - 30, tornado.y - tornado.size/2 - 20);
 
     ctx.restore();
 }
 
 function buyInterceptor() {
     if(money >= 500) {
-        money -= 500; player.isInterceptor = true; player.maxSpeed = 4;
-        const btn = document.getElementById('buyBtn');
-        btn.innerText = "ACTIVATED"; btn.classList.add('unlocked');
+        money -= 500; player.isInterceptor = true; player.maxSpeed = 4.2;
+        document.getElementById('buyBtn').innerText = "DOMINATOR ACTIVE";
+        document.getElementById('buyBtn').className = "unlocked";
     }
 }
 
