@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Storm Chasing Tycoon</title>
+    <title>Storm Chasing Tycoon - Slow & Large</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="game-container">
+<div id="ui-layer">
     <div id="ui">
         <div class="stat">Budget: $<span id="money">0</span></div>
         <div class="stat">Sonden-Daten: <span id="data">0</span>%</div>
@@ -28,18 +28,19 @@
                 <small>Kosten: $500</small>
             </button>
             <p style="font-size: 0.7rem; color: #bbb; margin-top: 10px;">
-                Vorteil: Hält EF5 stand & fährt schneller auf Wiesen.
+                Vorteil: Übersteht EF5-Treffer & fährt besser Offroad.
             </p>
         </div>
     </div>
+</div>
 
+<div id="game-viewport">
     <canvas id="gameCanvas"></canvas>
 </div>
 
 <script src="game.js"></script>
 
 <script>
-    // Kleine Funktion zum Ein/Ausblenden des Shops
     function toggleShop() {
         const content = document.getElementById('shop-content');
         const btn = document.getElementById('toggle-shop');
