@@ -12,20 +12,45 @@
     <div id="ui">
         <div class="stat">Budget: $<span id="money">0</span></div>
         <div class="stat">Sonden-Daten: <span id="data">0</span>%</div>
-        <div style="font-size: 0.8rem; opacity: 0.7;">LEERTASTE: Sonde abwerfen | WASD: Fahren</div>
+        <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 5px;">
+            WASD: Fahren | LEER: Sonde | F5: Reset
+        </div>
     </div>
 
     <div id="shop">
-        <h3>Fahrzeug-Werkstatt</h3>
-        <button id="buyBtn" onclick="buyInterceptor()">
-            Dominator 3 kaufen<br>
-            <small>Kosten: $500</small>
-        </button>
+        <div id="shop-header">
+            <strong>WERKSTATT</strong>
+            <button id="toggle-shop" onclick="toggleShop()">X</button>
+        </div>
+        <div id="shop-content">
+            <button id="buyBtn" onclick="buyInterceptor()">
+                Dominator 3<br>
+                <small>Kosten: $500</small>
+            </button>
+            <p style="font-size: 0.7rem; color: #bbb; margin-top: 10px;">
+                Vorteil: Hält EF5 stand & fährt schneller auf Wiesen.
+            </p>
+        </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 </div>
 
 <script src="game.js"></script>
+
+<script>
+    // Kleine Funktion zum Ein/Ausblenden des Shops
+    function toggleShop() {
+        const content = document.getElementById('shop-content');
+        const btn = document.getElementById('toggle-shop');
+        if (content.style.display === "none") {
+            content.style.display = "block";
+            btn.innerText = "X";
+        } else {
+            content.style.display = "none";
+            btn.innerText = "+";
+        }
+    }
+</script>
 </body>
 </html>
